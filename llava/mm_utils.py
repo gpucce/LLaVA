@@ -181,8 +181,7 @@ def process_images(images, image_processor, model_cfg):
         new_images = torch.stack(new_images, dim=0)
     return new_images
 
-
-def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None):
+def _tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None):
     prompt_chunks = [tokenizer(chunk).input_ids for chunk in prompt.split('<image>')]
 
     def insert_separator(X, sep):
@@ -202,6 +201,19 @@ def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX
             return torch.tensor(input_ids, dtype=torch.long)
         raise ValueError(f'Unsupported tensor type: {return_tensors}')
     return input_ids
+
+def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None):
+    if isinstance(prompt, str):
+        return _tokenizer_image_token(prompt, tokenizer, image_token_index, return_tensors)
+    elif isinstance(prompt, list):
+        input_ids = [_tokenizer_image_token(p, tokenizer, image_token_index) for p in prompt]
+        pad_token_id = tokenizer.pad_token_id
+        max_length = max(len(x) for x in input_ids)
+        input_ids = [[pad_token_id] * (max_length - len(x)) + x for x in input_ids]
+        if return_tensors == 'pt':
+            input_ids = torch.stack([torch.tensor(x, dtype=torch.long) for x in input_ids])
+        return input_ids
+
 
 
 def get_model_name_from_path(model_path):
