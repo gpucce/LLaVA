@@ -1,5 +1,5 @@
 llava_conda_env
-captioned
+captioned*
 
 # Python
 __pycache__
